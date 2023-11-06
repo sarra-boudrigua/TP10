@@ -4,14 +4,20 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Description : A repetitive event that terminates after a given date, or after
  * a given number of occurrences
  */
 public class FixedTerminationEvent extends RepetitiveEvent {
+
     private LocalDate terminationInclusive;
-    private long numberOfOccurrences;
+private long numberOfOccurrences;
+private LocalDate calculTermination;
+private List<LocalDate> exceptions = new ArrayList<>();
+
     
     /**
      * Constructs a fixed terminationInclusive event ending at a given date
@@ -28,21 +34,11 @@ public class FixedTerminationEvent extends RepetitiveEvent {
      * @param terminationInclusive the date when this event ends
      */
     public FixedTerminationEvent(String title, LocalDateTime start, Duration duration, ChronoUnit frequency, LocalDate terminationInclusive) {
-         super(title, start, duration, frequency);
-        // TODO : implémenter cette méthode
+        super(title, start, duration, frequency);
         this.terminationInclusive = terminationInclusive;
-        LocalDate nStart = start.toLocalDate();
-        if (frequency.equals(ChronoUnit.DAYS)) {
-            numberOfOccurrences = ChronoUnit.DAYS.between(nStart, terminationInclusive) + 1;
-        }
-        if (frequency.equals(ChronoUnit.WEEKS)) {
-            numberOfOccurrences = ChronoUnit.WEEKS.between(nStart, terminationInclusive) + 1;
-        }
-        if (frequency.equals(ChronoUnit.MONTHS)) {
-            numberOfOccurrences = ChronoUnit.MONTHS.between(nStart, terminationInclusive) + 1;
-        }
-
+        this.numberOfOccurrences = frequency.between(start.toLocalDate(), terminationInclusive) + 1;
     }
+    
 
     /**
      * Constructs a fixed termination event ending after a number of iterations
@@ -60,18 +56,25 @@ public class FixedTerminationEvent extends RepetitiveEvent {
      */
     public FixedTerminationEvent(String title, LocalDateTime start, Duration duration, ChronoUnit frequency, long numberOfOccurrences) {
         super(title, start, duration, frequency);
-        // TODO : implémenter cette méthode
         this.numberOfOccurrences = numberOfOccurrences;
-        LocalDate nStart = start.toLocalDate();
-        if (frequency.equals(ChronoUnit.DAYS)) {
-            terminationInclusive = nStart.plusDays(numberOfOccurrences-1);
+        this.calculTermination = calculateTerminationDate(start, frequency, numberOfOccurrences);
+    }
+    
+    private LocalDate calculateTerminationDate(LocalDateTime start, ChronoUnit frequency, long numberOfOccurrences) {
+        LocalDate terminationDate = start.toLocalDate();
+        for (int i = 1; i < numberOfOccurrences; i++) {
+            terminationDate = terminationDate.plus(1, frequency);
         }
-        if (frequency.equals(ChronoUnit.WEEKS)) {
-            terminationInclusive = nStart.plusWeeks(numberOfOccurrences-1);
-        }
-        if (frequency.equals(ChronoUnit.MONTHS)) {
-            terminationInclusive = nStart.plusMonths(numberOfOccurrences-1);
-        }
+        return terminationDate;
+    }
+    
+
+    @Override
+    public String toString() {
+        return super.toString() +
+                "terminationInclusive=" + terminationInclusive +
+                ", numberOfOccurrences=" + numberOfOccurrences +
+                '}';
     }
 
     /**
@@ -79,13 +82,33 @@ public class FixedTerminationEvent extends RepetitiveEvent {
      * @return the termination date of this repetitive event
      */
     public LocalDate getTerminationDate() {
-        // TODO : implémenter cette méthode
-        return this.terminationInclusive;
+
+        return calculTermination;
     }
 
     public long getNumberOfOccurrences() {
-        // TODO : implémenter cette méthode
-        return this.numberOfOccurrences;
+        return numberOfOccurrences;
     }
-        
+
+    public void addException(LocalDate date) {
+        exceptions.add(date);
+    }
+    
+    @Override
+    public boolean isInDay(LocalDate aDay) {
+        if (getStart().toLocalDate().isEqual(aDay)) {
+            return true; // The start date is considered the first occurrence
+        } else {
+            LocalDate dateOccurrence = getStart().toLocalDate();
+            for (int i = 1; i < getNumberOfOccurrences(); i++) { // Start from 1 to exclude the start date
+                dateOccurrence = dateOccurrence.plus(1, getFrequency());
+                if (dateOccurrence.isEqual(aDay) && !exceptions.contains(aDay)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
 }
